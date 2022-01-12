@@ -2,8 +2,8 @@ function Assert-True
 {
     [CmdletBinding()]
     param(
-        $Message,
-        $Condition
+        [string] $Message,
+        [bool] $Condition
     )
     if ( -not $Condition )
     {
@@ -11,23 +11,32 @@ function Assert-True
     }
 }
 
-if ( $args.Count -eq 0 )
+function Request
 {
-    Write-Host "Hey. This script generates .net library template."
-    Write-Host "First argument is your library's name, and all other arguments are names"
-    Write-Host "of your modules."
-    return
+    [CmdletBinding()]
+    param(
+        [string] $Message,
+        [string] $Default = ""
+    )
+    Write-Host $Message
+    $res = Read-Host
+    if ($res -eq "")
+    {
+        return $Default
+    }
+    else
+    {
+        return $res
+    }
 }
 
-Assert-True "Argument count ${$args.Count} to be at least 2" ($args.Count -gt 1)
+Write-Host "Hey. This script generates .net library template! Answer a few questions and then the script will start."
 
-$LibraryName = $args[0]
-Assert-True "The library's name should be string!" ($LibraryName -is [String])
-
-for ($i = 1; $i -lt $args.Count; $i++)
-{
-    Assert-True "The argument ${$args[$i]} was expected to be string" ($LibraryName -is [String])
-}
+$libraryName = Request "Your whole library name?"
+$modules     = Request "List all modules"
+$libTarget   = Request "Enter target for your library (default: netstandard2.0)"                      "netstandard2.0"
+$exeTarget   = Request "Target framework for tests/samples/benchmarks/playground (default: net6.0):"  "net6.0"
+$testFw      = Request "Test framework (default: xUnit):"                                             "xunit"
 
 dotnet new sln -n $LibraryName
 
@@ -41,27 +50,26 @@ $folders = "Sources", "Tests", "Benchmarks", "Samples", "Playground"
 
 for ($i = 0; $i -lt $folders.Count; $i++)
 {
-    New-Item -Path $folders[i] -Name "Directory.Build.props"
-    New-Item -Path $folders[i] -Name "Directory.Build.targets"
+    New-Item -Path $folders[$i] -Name "Directory.Build.props"
+    New-Item -Path $folders[$i] -Name "Directory.Build.targets"
 }
 
-for ($i = 1; $i -lt $args.Count; $i++)
+for ($i = 0; $i -lt $modules.Count; $i++)
 {
-    $module     = $LibraryName + "." + $args[$i]
+    $module     = $LibraryName + "." + $modules[$i]
     $test       = $module + ".Tests"
     $benchmark  = $module + ".Benchmarks"
     $sample     = $module + ".Sample"
     $playground = $module + ".Playground"
     $lang       = "C#"
-    $libTarget  = "netstandard2.0"
-    $exeTarget  = "net6.0"
+    $postfix    = ".csproj"
     
     Set-Location Sources
     dotnet new classlib -n $module -f $libTarget -lang $lang
     Set-Location ..
     
     Set-Location Tests
-    dotnet new xunit -n $test -f $exeTarget -lang $lang
+    dotnet new $testFw -n $test -f $exeTarget -lang $lang
     Set-Location ..
     
     Set-Location Benchmarks
@@ -76,10 +84,10 @@ for ($i = 1; $i -lt $args.Count; $i++)
     dotnet new console -n $Playground -f $exeTarget -lang $lang
     Set-Location ..
     
-    dotnet add reference Tests/$test/$test.csproj                  Sources/$module/$module.csproj
-    dotnet add reference Benchmarks/$benchmark/$benchmark.csproj   Sources/$module/$module.csproj
-    dotnet add reference Samples/$sample/$sample.csproj            Sources/$module/$module.csproj
-    dotnet add reference Playground/$playground/$playground.csproj Sources/$module/$module.csproj
+    dotnet add reference Tests/$test/$test.$postfix                  Sources/$module/$module.$postfix
+    dotnet add reference Benchmarks/$benchmark/$benchmark.$postfix   Sources/$module/$module.$postfix
+    dotnet add reference Samples/$sample/$sample.$postfix            Sources/$module/$module.$postfix
+    dotnet add reference Playground/$playground/$playground.$postfix Sources/$module/$module.$postfix
     
     dotnet sln add Sources/$module
     dotnet sln add Tests/$test
