@@ -47,6 +47,15 @@ function RequestArray
     }
 }
 
+function Log
+{
+    [CmdletBinding()]
+    param(
+        [string] $Message
+    )
+    Write-Host "!!>> $Message"
+}
+
 Write-Host "Hey. This script generates .net library template! Answer a few questions and then the script will start."
 
 $libraryName = Request      "Your whole library name?"
@@ -59,15 +68,19 @@ $license     = Request      "License (default: MIT):"                           
 
 dotnet new sln -n $LibraryName
 
+Log "Solution created"
+
 New-Item -Name "Sources"     -ItemType "directory"
 New-Item -Name "Tests"       -ItemType "directory"
 New-Item -Name "Benchmarks"  -ItemType "directory"
 New-Item -Name "Samples"     -ItemType "directory"
 New-Item -Name "Playground"  -ItemType "directory" 
 
-$folders = "Sources", "Tests", "Benchmarks", "Samples", "Playground"
+Log "Folders created"
 
-dotnet tool install dotnet-proj-cli --prerelease
+dotnet tool install dotnet-proj-cli --prerelease --tool-path "./__tmp_tool__/"
+
+Log "Tool temporarily installed"
 
 # Directory.Build sector start
 
@@ -78,42 +91,51 @@ Set-Location Sources
 dotnet proj create -o $dbp
 dotnet proj create -o $dbt
 
-dotnet proj add -o $dbp -p TargetFrameworks -v $libTarget
+dotnet proj add -o $dbp -p TargetFrameworks -c $libTarget
 if ($authorName -ne "")
 {
-    dotnet proj add -o $dbp -p Authors -v $authorName
+    dotnet proj add -o $dbp -p Authors -c $authorName
 }
-dotnet proj add -o $dbp -p PackageLicenseExpression -v $license
-
+dotnet proj add -o $dbp -p PackageLicenseExpression -c $license
 Set-Location ..
 
 Set-Location Tests
 dotnet proj create -o $dbp
+dotnet proj add -i PackageReference -a Include xunit Version 2.4.1
+dotnet proj add -i PackageReference -a Include Microsoft.NET.Test.Sdk Version 17.0.0
+dotnet proj add -p TargetFrameworks -c $exeTarget
+
 dotnet proj create -o $dbt
 Set-Location ..
 
 Set-Location Benchmarks
 dotnet proj create -o $dbp
+dotnet proj add -p TargetFrameworks -c $exeTarget
+dotnet proj add -p OutputType -c Exe
+dotnet proj add -i PackageReference -a Include BenchmarkDotNet Version 0.13.1
+
 dotnet proj create -o $dbt
 Set-Location ..
 
 Set-Location Samples
 dotnet proj create -o $dbp
+dotnet proj add -p OutputType -c Exe
+dotnet proj add -p TargetFrameworks -c $exeTarget
+
 dotnet proj create -o $dbt
 Set-Location ..
 
 Set-Location Playground
 dotnet proj create -o $dbp
+dotnet proj add -p OutputType -c Exe
+dotnet proj add -p TargetFrameworks -c $exeTarget
+
 dotnet proj create -o $dbt
 Set-Location ..
 
-# Directory.Build sector end
+Log "Directory.Build files created"
 
-for ($i = 0; $i -lt $folders.Count; $i++)
-{
-    New-Item -Path $folders[$i] -Name "Directory.Build.props"
-    New-Item -Path $folders[$i] -Name "Directory.Build.targets"
-}
+# Directory.Build sector end
 
 for ($i = 0; $i -lt $modules.Count; $i++)
 {
@@ -124,37 +146,29 @@ for ($i = 0; $i -lt $modules.Count; $i++)
     $playground = $module + ".Playground"
     $lang       = "C#"
     $postfix    = "csproj"
-    
-    Set-Location Sources
-    dotnet new classlib -n $module -f $libTarget -lang $lang
-    Set-Location ..
-    
-    Set-Location Tests
-    dotnet new $testFw -n $test -f $exeTarget -lang $lang
-    Set-Location ..
-    
-    Set-Location Benchmarks
-    dotnet new console -n $benchmark -f $exeTarget -lang $lang
-    Set-Location ..
-    
-    Set-Location Samples
-    dotnet new console -n $sample -f $exeTarget -lang $lang
-    Set-Location ..
-    
-    Set-Location Playground
-    dotnet new console -n $Playground -f $exeTarget -lang $lang
-    Set-Location ..
-    
     $sourceProj = "Sources/$module/$module.$postfix"
 
-    dotnet add "Tests/$test/$test.$postfix"                  reference $sourceProj
-    dotnet add "Benchmarks/$benchmark/$benchmark.$postfix"   reference $sourceProj
-    dotnet add "Samples/$sample/$sample.$postfix"            reference $sourceProj
-    dotnet add "Playground/$playground/$playground.$postfix" reference $sourceProj
-    
+    dotnet proj create -o "Sources/$module/$module.$postfix"
+
+    dotnet proj create -o "Tests/$test/$test.$postfix"
+    dotnet proj add    -o "Tests/$test/$test.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+
+    dotnet proj create -o "Benchmarks/$benchmark/$benchmark.$postfix"
+    dotnet proj add    -o "Benchmarks/$benchmark/$benchmark.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+
+    dotnet proj create -o "Samples/$sample/$sample.$postfix"
+    dotnet proj add    -o "Samples/$sample/$sample.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+
+    dotnet proj create -o "Playground/$playground/$playground.$postfix"
+    dotnet proj add    -o "Playground/$playground/$playground.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+
     dotnet sln add "Sources/$module"
     dotnet sln add "Tests/$test"
     dotnet sln add "Benchmarks/$benchmark"
     dotnet sln add "Samples/$sample"
     dotnet sln add "Playground/$Playground"
+
+    Log "Module $module created"
 }
+
+dotnet tool uninstall dotnet-proj-cli --tool-path "./__tmp_tool__/"
