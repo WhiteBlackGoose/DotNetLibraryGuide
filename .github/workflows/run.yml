@@ -14,5 +14,4 @@ jobs:
         dotnet-version: '6.0.100'
         
     - run: |
-        chmod +x gen.ps1
-        ./gen.ps1
+        powershell gen.ps1
