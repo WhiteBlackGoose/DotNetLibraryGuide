@@ -4,10 +4,10 @@ Feel free to PR though.
 
 # .NET Library Generator
 
-[**Download**](https://raw.githubusercontent.com/WhiteBlackGoose/DotNetLibraryGuide/main/gen.ps1) powershell library generator. Run it and supply with your library and module names:
+[**Download**](https://raw.githubusercontent.com/WhiteBlackGoose/DotNetLibraryGuide/main/gen.ps1) powershell library generator. Run it and follow the instructions.
 
 ```
-./gen.ps1 YourLibrary ModuleA ModuleB ModuleC
+./gen.ps1
 ```
 
 # .NET Library Guide
