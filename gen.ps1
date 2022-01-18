@@ -78,7 +78,7 @@ New-Item -Name "Playground"  -ItemType "directory"
 
 Log "Folders created"
 
-dotnet tool install dotnet-proj-cli --prerelease --tool-path "./__tmp_tool__/"
+dotnet tool install dotnet-proj-cli --prerelease --tool-path "./__tmp_tool__/" --no-cache
 
 Log "Tool temporarily installed"
 
@@ -148,19 +148,21 @@ for ($i = 0; $i -lt $modules.Count; $i++)
     $postfix    = "csproj"
     $sourceProj = "Sources/$module/$module.$postfix"
 
-    dotnet proj create -o "Sources/$module/$module.$postfix"
+    dotnet proj create -o "./Sources/$module/$module.$postfix"
+    dotnet proj add    -o "./Sources/$module/$module.$postfix" -p PackageId -c $module
+    dotnet proj add    -o "./Sources/$module/$module.$postfix" -p Product -c $module
 
-    dotnet proj create -o "Tests/$test/$test.$postfix"
-    dotnet proj add    -o "Tests/$test/$test.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+    dotnet proj create -o "./Tests/$test/$test.$postfix"
+    dotnet proj add    -o "./Tests/$test/$test.$postfix" -i ProjectReference -a Include "../../$sourceProj"
 
-    dotnet proj create -o "Benchmarks/$benchmark/$benchmark.$postfix"
-    dotnet proj add    -o "Benchmarks/$benchmark/$benchmark.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+    dotnet proj create -o "./Benchmarks/$benchmark/$benchmark.$postfix"
+    dotnet proj add    -o "./Benchmarks/$benchmark/$benchmark.$postfix" -i ProjectReference -a Include "../../$sourceProj"
 
-    dotnet proj create -o "Samples/$sample/$sample.$postfix"
-    dotnet proj add    -o "Samples/$sample/$sample.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+    dotnet proj create -o "./Samples/$sample/$sample.$postfix"
+    dotnet proj add    -o "./Samples/$sample/$sample.$postfix" -i ProjectReference -a Include "../../$sourceProj"
 
-    dotnet proj create -o "Playground/$playground/$playground.$postfix"
-    dotnet proj add    -o "Playground/$playground/$playground.$postfix" -i ProjectReference -a Include "../../$sourceProj"
+    dotnet proj create -o "./Playground/$playground/$playground.$postfix"
+    dotnet proj add    -o "./Playground/$playground/$playground.$postfix" -i ProjectReference -a Include "../../$sourceProj"
 
     dotnet sln add "Sources/$module"
     dotnet sln add "Tests/$test"
